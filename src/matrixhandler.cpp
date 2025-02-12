@@ -1,96 +1,88 @@
 #include "MatrixHandler.h"
+#include <QRegularExpression>
 #include <QFile>
 #include <QTextStream>
 #include <QDebug>
 
 MatrixHandler::MatrixHandler() {}
 
-
-bool MatrixHandler::loadMatrixFromFile(const QString& fileName, QVector<QVector<double>>& matrix, QVector<double>& b)
-{
+bool MatrixHandler::loadMatrixFromFile(const QString& fileName, QVector<QVector<double>>& matrix, QVector<double>& b) {
     QFile file(fileName);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qDebug() << "Chyba při otevírání souboru.";
+        qDebug() << "Chyba: Nelze otevřít soubor.";
         return false;
     }
 
     QTextStream in(&file);
-    int rows, cols;
-    in >> rows >> cols;
+    matrix.clear();
+    b.clear();
 
-    // Nastavení velikosti matice a vektoru b
-    matrix.resize(rows);
-    b.resize(rows);
+    while (!in.atEnd()) {
+        QString line = in.readLine().trimmed();
+        if (line.isEmpty()) continue;
 
-    // Načítání matice a vektoru b (poslední sloupec je vektor b)
-    for (int i = 0; i < rows; ++i) {
-        matrix[i].resize(cols - 1);  // Matice má o jeden sloupec méně než počet sloupců v souboru
-        for (int j = 0; j < cols - 1; ++j) {
-            in >> matrix[i][j];  // Načítání hodnot matice (bez posledního sloupce)
+        QStringList values = line.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
+        int numCols = values.size();
+        if (numCols < 2) {
+            qDebug() << "Chyba: Řádka neobsahuje dostatek hodnot.";
+            return false;
         }
-        in >> b[i];  // Načítání hodnoty z posledního sloupce do vektoru b
-    }
 
-
-    // Validace matice a vektoru
-    if (!validateMatrix(matrix) || !validateVector(b, matrix)) {
-        return false;
-    }
-
-    return true;
-}
-
-
-
-bool MatrixHandler::validateMatrix(const QVector<QVector<double>>& matrix)
-{
-    int rows = matrix.size();
-    int cols = matrix[0].size();
-
-    for (int i = 0; i < rows; ++i) {
-        double sum = 0.0;
-
-        // Sum of all values except for the diagonal
-        for (int j = 0; j < cols; ++j) {
-            if (i != j) {
-                sum += matrix[i][j];
+        QVector<double> row;
+        bool ok = true;
+        for (int i = 0; i < numCols - 1; ++i) {
+            row.append(values[i].toDouble(&ok));
+            if (!ok) {
+                qDebug() << "Chyba: Neplatná hodnota v řádku.";
+                return false;
             }
         }
 
-        // Check diagonal dominance
-        if (matrix[i][i] <= sum) {
-            qDebug() << "Matrix is not diagonally dominant at row" << i + 1;
-            return false; // If it's not diagonally dominant, return false
+        matrix.append(row);
+        b.append(values.last().toDouble(&ok));
+        if (!ok) {
+            qDebug() << "Chyba: Neplatná hodnota vektoru b.";
+            return false;
         }
     }
 
-    return true; // Matrix is diagonally dominant
+    file.close();
+
+    // Kontrola správné velikosti matice
+    int expectedCols = matrix.first().size();
+    for (const auto& row : matrix) {
+        if (row.size() != expectedCols) {
+            qDebug() << "Chyba: Matice má nekonzistentní počet sloupců.";
+            return false;
+        }
+    }
+
+    return true;
 }
 
+bool MatrixHandler::validateMatrix(const QVector<QVector<double>>& matrix) {
+    for (int i = 0; i < matrix.size(); ++i) {
+        double diag = matrix[i][i];
+        double sum = 0.0;
+        for (int j = 0; j < matrix[i].size(); ++j) {
+            if (i != j) sum += matrix[i][j];
+        }
 
-
-
-
-
-bool MatrixHandler::validateVector(const QVector<double>& b, const QVector<QVector<double>>& matrix)
-{
-    // Kontrola, že vektor b má správnou délku (stejný počet prvků jako matice)
-    if (b.size() != matrix.size()) {
-        qDebug() << "Vektor b musí mít stejný počet prvků jako matice.";
-        return false;
+        if (diag <= sum) {
+            qDebug() << "Chyba: Matice není diagonálně dominantní v řádku" << i + 1;
+            return false;
+        }
     }
     return true;
 }
 
-bool MatrixHandler::isValidIndex(int index, int size)
-{
-    return index >= 0 && index < size;
+bool MatrixHandler::validateVector(const QVector<double>& b, const QVector<QVector<double>>& matrix) {
+    return (b.size() == matrix.size());
 }
 
-void MatrixHandler::printResults(const QVector<double>& results)
-{
+void MatrixHandler::printResults(const QVector<double>& results) {
     qDebug() << "Výsledek:";
     for (int i = 0; i < results.size(); ++i) {
-        qDebug() << "x_" << i + 1 << "=" << results[i];
+        qDebug() << "x_" + QString::number(i + 1) << "=" << results[i];
     }
 }

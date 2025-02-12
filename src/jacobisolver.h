@@ -4,36 +4,33 @@
 #include <QVector>
 #include <QMutex>
 #include <QWaitCondition>
-#include <QThread>
+#include "JacobiWorker.h"
 
-class JacobiSolver
-{
+class JacobiSolver {
 public:
     JacobiSolver(int size);
+    ~JacobiSolver();
 
-    // Metoda pro řešení systému rovnic s epsilonem (přesnost)
-    void solve(double epsilon);
-
-    // Nastavení matice a pravé strany
     void setMatrix(const QVector<QVector<double>>& m);
     void setB(const QVector<double>& rhs);
-
-    // Získání výsledku (vektoru řešení)
     QVector<double> getResult();
 
+    void solve(double epsilon);
+
 private:
-    // Metoda pro kontrolu diagonální dominance
-    bool isDiagonallyDominant() const;
+    int size;
+    QVector<QVector<double>> matrix;
+    QVector<double> b;
+    QVector<double> x;
+    QVector<double> xNew;
+    QVector<double> xOld; // Kopie pro čtení
 
-    int size;  // Velikost matice
-    QVector<QVector<double>> matrix;  // Matice koeficientů
-    QVector<double> b;  // Pravá strana
-    QVector<double> x;  // Aktuální řešení
-    QVector<double> xNew;  // Nové řešení
-    bool ready;  // Flag pro indikaci, že vlákna jsou připravena na další iteraci
+    QMutex mutex;
+    QWaitCondition condition;
+    int finishedThreads;
+    bool ready;
 
-    QMutex mutex;  // Mutex pro synchronizaci vlákna
-    QWaitCondition condition;  // Podmínka pro čekání ve vláknech
+    QVector<JacobiWorker*> workers;
 };
 
-#endif // JACOBISOLVER_H
+#endif

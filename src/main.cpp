@@ -4,48 +4,51 @@
 #include "JacobiSolver.h"
 #include "ArgumentParser.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     QCoreApplication a(argc, argv);
 
-    // Vytvoření instance ArgumentParser pro zpracování argumentů
+    // Parse command-line arguments
     ArgumentParser parser(argc, argv);
-
     if (!parser.parseArguments()) {
-        return -1;  // Ukončíme aplikaci v případě chyby
+        qDebug() << "Chyba: Špatné argumenty. Použití: program <soubor> <epsilon>";
+        return -1;
     }
 
-    // Získání hodnot souboru a epsilonu
     QString fileName = parser.getFileName();
     double epsilon = parser.getEpsilon();
 
-    // Výpis zadaných hodnot pro potvrzení
-    qDebug() << "Zadaný soubor: " << fileName;
-    qDebug() << "Zadaná hodnota epsilon je: " << epsilon;
+    qDebug() << "Načítám soubor:" << fileName;
+    qDebug() << "Epsilon:" << epsilon;
 
-    // Vytvoření instance pro načítání matice
+    // Load matrix and vector from file
     MatrixHandler handler;
-
     QVector<QVector<double>> matrix;
     QVector<double> b;
 
     if (!handler.loadMatrixFromFile(fileName, matrix, b)) {
-        qDebug() << "Chyba při načítání souboru!";
-        return -1; // Ukončíme aplikaci v případě chyby
+        qDebug() << "Chyba: Nelze načíst matici nebo vektor ze souboru.";
+        return -1;
     }
 
-    // Předpokládáme, že velikost matice je správná
-    int size = matrix.size();
+    // Validate matrix and vector
+    if (!handler.validateMatrix(matrix)) {
+        return -1;
+    }
 
-    // Vytvoření instance pro řešení systému rovnic pomocí Jacobiho metody
+    if (!handler.validateVector(b, matrix)) {
+        qDebug() << "Chyba: Vektor b má nesprávnou velikost.";
+        return -1;
+    }
+
+    // Solve the system using Jacobi method
+    int size = matrix.size();
     JacobiSolver solver(size);
     solver.setMatrix(matrix);
     solver.setB(b);
 
-    // Řešení rovnic
-    solver.solve(epsilon); // Použití epsilon místo iterací
+    solver.solve(epsilon);
 
-    // Výpis výsledků
+    // Print results
     QVector<double> result = solver.getResult();
     handler.printResults(result);
 

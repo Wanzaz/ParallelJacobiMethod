@@ -9,20 +9,20 @@ class MatrixHandler
 public:
     MatrixHandler();
 
-    // Funkce pro načtení matice a vektoru b ze souboru
+    // Load matrix and vector b from file
     bool loadMatrixFromFile(const QString& fileName, QVector<QVector<double>>& matrix, QVector<double>& b);
 
-    // Funkce pro validaci matice
+    // Validate matrix (check for diagonal dominance)
     bool validateMatrix(const QVector<QVector<double>>& matrix);
 
-    // Funkce pro validaci vektoru b
+    // Validate vector b (check if it matches the matrix size)
     bool validateVector(const QVector<double>& b, const QVector<QVector<double>>& matrix);
 
-    // Funkce pro výpis výsledků
+    // Print results
     void printResults(const QVector<double>& results);
 
 private:
-    // Funkce pro kontrolu, zda je index v platném rozsahu
+    // Check if an index is valid
     bool isValidIndex(int index, int size);
 };
 

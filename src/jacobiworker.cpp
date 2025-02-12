@@ -1,37 +1,43 @@
 #include "JacobiWorker.h"
-#include <QDebug>
-#include <exception>
+
+JacobiWorker::JacobiWorker(int startRow, int endRow, const QVector<QVector<double>>* matrix,
+                           const QVector<double>* b, const QVector<double>* xOld,
+                           QVector<double>* xNew, QMutex* mutex, QWaitCondition* condition,
+                           int* finishedThreads, bool* ready)
+    : startRow(startRow), endRow(endRow), matrix(matrix), b(b), xOld(xOld), xNew(xNew),
+    mutex(mutex), condition(condition), finishedThreads(finishedThreads), ready(ready),
+    terminateFlag(false) {}
 
 void JacobiWorker::run() {
-    try {
-        while (true) {
-            mutex->lock();
-            while (!(*ready)) {
-                condition->wait(mutex);
-            }
-            mutex->unlock();
-
-            // Provádění výpočtů
-            for (int i = startRow; i < endRow; ++i) {
-                double sum = 0.0;
-                for (int j = 0; j < matrix->size(); ++j) {
-                    if (i != j) {
-                        sum += (*matrix)[i][j] * (*x)[j];
-                    }
-                }
-                (*xNew)[i] = ((*b)[i] - sum) / (*matrix)[i][i];
-            }
-
-            mutex->lock();
-            *ready = false;
-            condition->wakeOne();
-            mutex->unlock();
+    while (!terminateFlag) {
+        mutex->lock();
+        while (!(*ready)) {
+            condition->wait(mutex);
         }
-    } catch (const std::exception& e) {
-        qDebug() << "Došlo k chybě ve vlákně:" << e.what();
-        errorFlag = true; // Nastavení příznaku chyby
-    } catch (...) {
-        qDebug() << "Došlo k neznámé chybě ve vlákně!";
-        errorFlag = true; // Nastavení příznaku chyby
+        mutex->unlock();
+
+        // Calculate new values for xNew
+        for (int i = startRow; i < endRow; ++i) {
+            double sum = 0.0;
+            for (int j = 0; j < matrix->size(); ++j) {
+                if (i != j) {
+                    sum += (*matrix)[i][j] * (*xOld)[j];
+                }
+            }
+            (*xNew)[i] = ((*b)[i] - sum) / (*matrix)[i][i];
+        }
+
+        mutex->lock();
+        (*finishedThreads)++;
+        if (*finishedThreads == matrix->size()) {
+            *ready = false;
+            *finishedThreads = 0;
+            condition->wakeAll();
+        }
+        mutex->unlock();
     }
+}
+
+void JacobiWorker::stop() {
+    terminateFlag = true;
 }

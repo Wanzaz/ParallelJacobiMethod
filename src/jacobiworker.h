@@ -8,24 +8,26 @@
 
 class JacobiWorker : public QThread {
     Q_OBJECT
-
 public:
-    JacobiWorker(int startRow, int endRow, QVector<QVector<double>>* matrix, QVector<double>* b, QVector<double>* x, QVector<double>* xNew, QMutex* mutex, QWaitCondition* condition, bool* ready)
-        : startRow(startRow), endRow(endRow), matrix(matrix), b(b), x(x), xNew(xNew), mutex(mutex), condition(condition), ready(ready), errorFlag(false) {}
+    JacobiWorker(int startRow, int endRow, const QVector<QVector<double>>* matrix,
+                 const QVector<double>* b, const QVector<double>* xOld,
+                 QVector<double>* xNew, QMutex* mutex, QWaitCondition* condition,
+                 int* finishedThreads, bool* ready);
 
     void run() override;
-    bool hasError() const { return errorFlag; }  // Funkce pro detekci chyby
+    void stop();
 
 private:
     int startRow, endRow;
-    QVector<QVector<double>>* matrix;
-    QVector<double>* b;
-    QVector<double>* x;
+    const QVector<QVector<double>>* matrix;
+    const QVector<double>* b;
+    const QVector<double>* xOld;
     QVector<double>* xNew;
     QMutex* mutex;
     QWaitCondition* condition;
+    int* finishedThreads;
     bool* ready;
-    bool errorFlag;  // Příznak chyby
+    bool terminateFlag;
 };
 
-#endif // JACOBIWORKER_H
+#endif
