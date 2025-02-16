@@ -30,7 +30,7 @@ JacobiSolver::JacobiSolver(int size) : size(size), ready(false), finishedThreads
 }
 
 JacobiSolver::~JacobiSolver() {
-    // Uvolnění všech pracovních vláken
+    // Free all working threads
     for (JacobiWorker* worker : workers) {
         worker->stop();  // Stop worker thread
         worker->wait();  // Wait until thread finishes

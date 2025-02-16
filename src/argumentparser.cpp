@@ -7,7 +7,6 @@ ArgumentParser::ArgumentParser(int argc, char *argv[])
 
 bool ArgumentParser::parseArguments()
 {
-    // Procházení argumentů
     for (int i = 1; i < argc; ++i) {
         QString arg = QString(argv[i]);
 
