@@ -10,10 +10,10 @@ JacobiSolver::JacobiSolver(int size) : size(size), ready(false), finishedThreads
     xNew.resize(size, 0);
     xOld.resize(size, 0);  // Initialize xOld for safe reading
 
-    // Inicializace vektoru x s náhodnými hodnotami
-    srand(time(0));  // Seed pro generování náhodných čísel
+    // Incialization of vector x with random values
+    srand(time(0));
     for (int i = 0; i < size; ++i) {
-        x[i] = rand() % 10 + 1;  // náhodné číslo mezi 1 a 10
+        x[i] = rand() % 10 + 1;
     }
 
     int numThreads = QThread::idealThreadCount();
@@ -38,9 +38,32 @@ JacobiSolver::~JacobiSolver() {
     }
 }
 
+void JacobiSolver::normalizeMatrix(QVector<QVector<double>>& matrix, QVector<double>& b)
+{
+    for (int r = 0; r < matrix.size(); ++r) {
+        double diag = matrix[r][r];
+
+        if (qFuzzyIsNull(diag)) {
+            qFatal("Chyba: Nulový diagonální prvek v řádku %d!", r);
+        }
+
+        for (int s = 0; s < matrix[r].size(); ++s) {
+            if (r != s) {
+                matrix[r][s] /= diag;
+            }
+        }
+
+        b[r] /= diag;
+        matrix[r][r] = 0.0;
+    }
+}
+
+
 void JacobiSolver::solve(double epsilon) {
     bool converged = false;
     int iteration = 0;
+
+    normalizeMatrix(matrix, b);
 
     while (!converged) {
         iteration++;

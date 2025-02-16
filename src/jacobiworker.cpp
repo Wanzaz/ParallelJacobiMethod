@@ -24,7 +24,7 @@ void JacobiWorker::run() {
                     sum += (*matrix)[i][j] * (*xOld)[j];
                 }
             }
-            (*xNew)[i] = ((*b)[i] - sum) / (*matrix)[i][i];
+            (*xNew)[i] = (*b)[i] - sum;
         }
 
         mutex->lock();

@@ -31,6 +31,8 @@ private:
     bool ready;
 
     QVector<JacobiWorker*> workers;
+
+    void normalizeMatrix(QVector<QVector<double>>& matrix, QVector<double>& b);
 };
 
 #endif
