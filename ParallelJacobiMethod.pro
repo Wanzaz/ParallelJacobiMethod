@@ -23,3 +23,7 @@ HEADERS += \
     src/jacobisolver.h \
     src/jacobiworker.h \
     src/matrixhandler.h
+
+DISTFILES += \
+    data/C.txt \
+    data/matrixC.txt
