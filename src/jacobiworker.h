@@ -1,21 +1,23 @@
 #ifndef JACOBIWORKER_H
 #define JACOBIWORKER_H
 
-#include <QThread>
+#include <QObject>
 #include <QVector>
-#include <QMutex>
-#include <QWaitCondition>
 
-class JacobiWorker : public QThread {
+class JacobiWorker : public QObject {
     Q_OBJECT
-public:
-    JacobiWorker(int startRow, int endRow, const QVector<QVector<double>>* matrix,
-                 const QVector<double>* b, const QVector<double>* xOld,
-                 QVector<double>* xNew, QMutex* mutex, QWaitCondition* condition,
-                 int* finishedThreads, bool* ready);
 
-    void run() override;
+public:
+    explicit JacobiWorker(int startRow, int endRow, const QVector<QVector<double>>* matrix,
+                          const QVector<double>* b, const QVector<double>* xOld,
+                          QVector<double>* xNew, QObject* parent = nullptr);
+
+public slots:
+    void compute();
     void stop();
+
+signals:
+    void finishedComputing();
 
 private:
     int startRow, endRow;
@@ -23,10 +25,6 @@ private:
     const QVector<double>* b;
     const QVector<double>* xOld;
     QVector<double>* xNew;
-    QMutex* mutex;
-    QWaitCondition* condition;
-    int* finishedThreads;
-    bool* ready;
     bool terminateFlag;
 };
 

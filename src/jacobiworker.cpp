@@ -1,42 +1,32 @@
 #include "JacobiWorker.h"
+#include <QDebug>
+#include <cmath>
 
 JacobiWorker::JacobiWorker(int startRow, int endRow, const QVector<QVector<double>>* matrix,
                            const QVector<double>* b, const QVector<double>* xOld,
-                           QVector<double>* xNew, QMutex* mutex, QWaitCondition* condition,
-                           int* finishedThreads, bool* ready)
-    : startRow(startRow), endRow(endRow), matrix(matrix), b(b), xOld(xOld), xNew(xNew),
-    mutex(mutex), condition(condition), finishedThreads(finishedThreads), ready(ready),
-    terminateFlag(false) {}
+                           QVector<double>* xNew, QObject* parent)
+    : QObject(parent), startRow(startRow), endRow(endRow), matrix(matrix),
+    b(b), xOld(xOld), xNew(xNew), terminateFlag(false) {}
 
-void JacobiWorker::run() {
-    while (!terminateFlag) {
-        mutex->lock();
-        while (!(*ready)) {
-            condition->wait(mutex);
-        }
-        mutex->unlock();
+void JacobiWorker::compute() {
+    if (terminateFlag) return;
 
-        // Calculate new values for xNew
-        for (int i = startRow; i < endRow; ++i) {
-            double sum = 0.0;
-            for (int j = 0; j < matrix->size(); ++j) {
-                if (i != j) {
-                    sum += (*matrix)[i][j] * (*xOld)[j];
-                }
+    qDebug() << "Worker computing rows:" << startRow << "to" << endRow;
+
+    for (int i = startRow; i < endRow; ++i) {
+        double sum = 0.0;
+        for (int j = 0; j < matrix->size(); ++j) {
+            if (i != j) {
+                sum += (*matrix)[i][j] * (*xOld)[j];
             }
-            (*xNew)[i] = (*b)[i] - sum;
         }
-
-        mutex->lock();
-        (*finishedThreads)++;
-        if (*finishedThreads == matrix->size()) {
-            *ready = false;
-            *finishedThreads = 0;
-            condition->wakeAll();
-        }
-        mutex->unlock();
+        (*xNew)[i] = (*b)[i] - sum;
     }
+
+    qDebug() << "Worker finished rows:" << startRow << "to" << endRow;
+    emit finishedComputing();
 }
+
 
 void JacobiWorker::stop() {
     terminateFlag = true;

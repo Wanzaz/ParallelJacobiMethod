@@ -1,16 +1,16 @@
 #include "JacobiSolver.h"
 #include <QDebug>
 #include <cmath>
-#include <cstdlib>  // pro srand a rand
+#include <cstdlib>
 
-JacobiSolver::JacobiSolver(int size) : size(size), ready(false), finishedThreads(0) {
+JacobiSolver::JacobiSolver(int size, QObject* parent)
+    : QObject(parent), size(size), ready(false), finishedThreads(0) {
     matrix.resize(size, QVector<double>(size, 0));
     b.resize(size, 0);
     x.resize(size, 0);
     xNew.resize(size, 0);
-    xOld.resize(size, 0);  // Initialize xOld for safe reading
+    xOld.resize(size, 0);
 
-    // Incialization of vector x with random values
     srand(time(0));
     for (int i = 0; i < size; ++i) {
         x[i] = rand() % 10 + 1;
@@ -19,91 +19,103 @@ JacobiSolver::JacobiSolver(int size) : size(size), ready(false), finishedThreads
     int numThreads = QThread::idealThreadCount();
     int rowsPerThread = size / numThreads;
 
-    // Create workers for parallel computation
     for (int i = 0; i < numThreads; ++i) {
         int startRow = i * rowsPerThread;
         int endRow = (i == numThreads - 1) ? size : startRow + rowsPerThread;
-        JacobiWorker* worker = new JacobiWorker(startRow, endRow, &matrix, &b, &xOld, &xNew, &mutex, &condition, &finishedThreads, &ready);
+
+        QThread* thread = new QThread();
+        JacobiWorker* worker = new JacobiWorker(startRow, endRow, &matrix, &b, &xOld, &xNew);
+        worker->moveToThread(thread);
+
+        connect(this, &JacobiSolver::startIteration, worker, &JacobiWorker::compute);
+        connect(this, &JacobiSolver::stopWorkers, worker, &JacobiWorker::stop);
+        connect(worker, &JacobiWorker::finishedComputing, this, &JacobiSolver::workerFinished);
+        connect(worker, &JacobiWorker::destroyed, thread, &QThread::quit);
+        connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+
+        threads.append(thread);
         workers.append(worker);
-        worker->start();
+
+        thread->start();
     }
 }
 
 JacobiSolver::~JacobiSolver() {
-    // Free all working threads
-    for (JacobiWorker* worker : workers) {
-        worker->stop();  // Stop worker thread
-        worker->wait();  // Wait until thread finishes
-        delete worker;   // Delete worker
+    emit stopWorkers();
+    for (QThread* thread : threads) {
+        thread->quit();
+        thread->wait();
     }
 }
 
-void JacobiSolver::normalizeMatrix(QVector<QVector<double>>& matrix, QVector<double>& b)
-{
+void JacobiSolver::normalizeMatrix(QVector<QVector<double>>& matrix, QVector<double>& b) {
     for (int r = 0; r < matrix.size(); ++r) {
         double diag = matrix[r][r];
-
         if (qFuzzyIsNull(diag)) {
-            qFatal("Chyba: Nulový diagonální prvek v řádku %d!", r);
+            qFatal("Error: Zero diagonal element at row %d!", r);
         }
-
         for (int s = 0; s < matrix[r].size(); ++s) {
             if (r != s) {
                 matrix[r][s] /= diag;
             }
         }
-
         b[r] /= diag;
         matrix[r][r] = 0.0;
     }
 }
 
-
 void JacobiSolver::solve(double epsilon) {
     bool converged = false;
     int iteration = 0;
-
     normalizeMatrix(matrix, b);
 
     while (!converged) {
         iteration++;
+        qDebug() << "Iteration:" << iteration;  // Sleduj iterace
 
-        // Synchronize and signal workers to start
         mutex.lock();
-        xOld = x;  // Assign current x to xOld for safe reading
+        xOld = x;
         ready = true;
-        finishedThreads = 0;  // Reset finished threads
-        condition.wakeAll();
+        finishedThreads = 0;
         mutex.unlock();
 
-        // Wait for all workers to finish
+        emit startIteration();
+
         mutex.lock();
-        while (ready) {
+        while (finishedThreads < workers.size()) {
             condition.wait(&mutex);
         }
         mutex.unlock();
 
-        // Debug output for the current iteration
-        qDebug() << "Iteration" << iteration;
-        for (int i = 0; i < size; ++i) {
-            qDebug() << "xNew[" << i << "] = " << xNew[i];
-        }
-
-        // Check for convergence
         double maxChange = 0.0;
         for (int i = 0; i < size; ++i) {
             maxChange = std::max(maxChange, std::abs(xNew[i] - x[i]));
         }
 
-        qDebug() << "Max change: " << maxChange;
+        qDebug() << "Max change:" << maxChange;  // Sleduj hodnotu změny
 
         if (maxChange < epsilon) {
+            qDebug() << "Converged!";
             converged = true;
         } else {
-            std::swap(x, xNew);  // Efficient swap of pointers instead of copying
+            std::swap(x, xNew);
         }
     }
+
+    emit finished();
 }
+
+
+void JacobiSolver::workerFinished() {
+    mutex.lock();
+    finishedThreads++;
+    qDebug() << "Worker finished. Total finished:" << finishedThreads << "/" << workers.size();
+    if (finishedThreads == workers.size()) {
+        condition.wakeAll();
+    }
+    mutex.unlock();
+}
+
 
 void JacobiSolver::setMatrix(const QVector<QVector<double>>& m) {
     matrix = m;
