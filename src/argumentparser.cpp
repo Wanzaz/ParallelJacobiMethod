@@ -39,7 +39,7 @@ bool ArgumentParser::parseArguments()
             bool epsilonOk = false;
             epsilon = QString(argv[i + 1]).toDouble(&epsilonOk);
             if (!epsilonOk || epsilon <= 0) {
-                qDebug() << "Chyba: Neplatná hodnota pro epsilon.";
+                qDebug() << "Error: Invalid value for epsilon.";
                 valid = false;
                 return false;
             }
@@ -49,7 +49,7 @@ bool ArgumentParser::parseArguments()
 
     // CHeck if the arguments are complete and valid
     if (fileName.isEmpty() || epsilon == 0.0) {
-        qDebug() << "Chyba: Nezadali jste soubor nebo epsilon.";
+        qDebug() << "Error: No file or epsilon specified.";
         valid = false;
         return false;
     }

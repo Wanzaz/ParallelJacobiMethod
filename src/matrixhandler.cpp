@@ -27,7 +27,7 @@ MatrixHandler::MatrixHandler() {}
 bool MatrixHandler::loadMatrixFromFile(const QString& fileName, QVector<QVector<double>>& matrix, QVector<double>& b) {
     QFile file(fileName);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qDebug() << "Chyba: Nelze otevřít soubor.";
+        qDebug() << "Error: Unable to open the file.";
         return false;
     }
 
@@ -42,7 +42,7 @@ bool MatrixHandler::loadMatrixFromFile(const QString& fileName, QVector<QVector<
         QStringList values = line.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
         int numCols = values.size();
         if (numCols < 2) {
-            qDebug() << "Chyba: Řádka neobsahuje dostatek hodnot.";
+            qDebug() << "Error: The row does not contain enough values.";
             return false;
         }
 
@@ -51,7 +51,7 @@ bool MatrixHandler::loadMatrixFromFile(const QString& fileName, QVector<QVector<
         for (int i = 0; i < numCols - 1; ++i) {
             row.append(values[i].toDouble(&ok));
             if (!ok) {
-                qDebug() << "Chyba: Neplatná hodnota v řádku.";
+                qDebug() << "Error: Invalid value in the row.";
                 return false;
             }
         }
@@ -59,18 +59,18 @@ bool MatrixHandler::loadMatrixFromFile(const QString& fileName, QVector<QVector<
         matrix.append(row);
         b.append(values.last().toDouble(&ok));
         if (!ok) {
-            qDebug() << "Chyba: Neplatná hodnota vektoru b.";
+            qDebug() << "Error: Invalid value in vector b.";
             return false;
         }
     }
 
     file.close();
 
-    // Check of the right size of the matrix
+    // Check if the matrix has a consistent number of columns
     int expectedCols = matrix.first().size();
     for (const auto& row : matrix) {
         if (row.size() != expectedCols) {
-            qDebug() << "Chyba: Matice má nekonzistentní počet sloupců.";
+            qDebug() << "Error: The matrix has an inconsistent number of columns.";
             return false;
         }
     }
@@ -97,7 +97,7 @@ bool MatrixHandler::validateMatrix(const QVector<QVector<double>>& matrix) {
         }
 
         if (diag <= sum) {
-            qDebug() << "Chyba: Matice není diagonálně dominantní v řádku" << i + 1;
+            qDebug() << "Error: The matrix is not diagonally dominant in row" << i + 1;
             return false;
         }
     }
@@ -123,7 +123,7 @@ bool MatrixHandler::validateVector(const QVector<double>& b, const QVector<QVect
  * @param results The solution vector to be printed.
  */
 void MatrixHandler::printResults(const QVector<double>& results) {
-    qDebug() << "Výsledek:";
+    qDebug() << "Result:";
     for (int i = 0; i < results.size(); ++i) {
         qDebug() << "x_" + QString::number(i + 1) << "=" << results[i];
     }

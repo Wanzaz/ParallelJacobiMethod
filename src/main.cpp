@@ -17,43 +17,36 @@
  * 5. Displays the results once the computation is finished.
  */
 int main(int argc, char *argv[]) {
-    QCoreApplication a(argc, argv);  // Create a Qt application instance
+    QCoreApplication a(argc, argv);
 
-    // Create an ArgumentParser object to parse command-line arguments
     ArgumentParser parser(argc, argv);
     if (!parser.parseArguments()) {
         qDebug() << "Error: Incorrect arguments. Usage: program <file> <epsilon>";
         return -1;
     }
 
-    // Get the parsed file name and epsilon value
     QString fileName = parser.getFileName();
     double epsilon = parser.getEpsilon();
 
     qDebug() << "Loading file:" << fileName;
     qDebug() << "Epsilon:" << epsilon;
 
-    // Create a MatrixHandler object to handle the matrix and vector
     MatrixHandler handler;
     QVector<QVector<double>> matrix;
     QVector<double> b;
 
-    // Attempt to load the matrix and vector from the file
     if (!handler.loadMatrixFromFile(fileName, matrix, b)) {
         qDebug() << "Error: Unable to load matrix or vector from file.";
         return -1;
     }
 
-    // Validate the matrix and vector
     if (!handler.validateMatrix(matrix) || !handler.validateVector(b, matrix)) {
         qDebug() << "Error: Matrix or vector is not valid.";
         return -1;
     }
 
-    // Get the size of the matrix (assuming square matrix)
     int size = matrix.size();
 
-    // Create a JacobiSolver object and initialize it with the matrix and vector
     JacobiSolver solver(size);
     solver.setMatrix(matrix);
     solver.setB(b);
