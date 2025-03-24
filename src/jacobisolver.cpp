@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <cmath>
 #include <cstdlib>
+#include <QTimer>
 
 JacobiSolver::JacobiSolver(int size, QObject* parent)
     : QObject(parent), size(size), ready(false), finishedThreads(0) {
@@ -32,6 +33,7 @@ JacobiSolver::JacobiSolver(int size, QObject* parent)
         connect(worker, &JacobiWorker::finishedComputing, this, &JacobiSolver::workerFinished);
         connect(worker, &JacobiWorker::destroyed, thread, &QThread::quit);
         connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+
 
         threads.append(thread);
         workers.append(worker);
@@ -71,7 +73,7 @@ void JacobiSolver::solve(double epsilon) {
 
     while (!converged) {
         iteration++;
-        qDebug() << "Iteration:" << iteration;  // Sleduj iterace
+        qDebug() << "Iteration:" << iteration;
 
         mutex.lock();
         xOld = x;
@@ -83,16 +85,21 @@ void JacobiSolver::solve(double epsilon) {
 
         mutex.lock();
         while (finishedThreads < workers.size()) {
+            qDebug() << "Waiting... Finished:" << finishedThreads << "/" << workers.size();
             condition.wait(&mutex);
+            qDebug() << "Condition signaled, checking again...";
         }
+        qDebug() << "All workers finished, continuing...";
         mutex.unlock();
+
+
 
         double maxChange = 0.0;
         for (int i = 0; i < size; ++i) {
             maxChange = std::max(maxChange, std::abs(xNew[i] - x[i]));
         }
 
-        qDebug() << "Max change:" << maxChange;  // Sleduj hodnotu změny
+        qDebug() << "Max change:" << maxChange;
 
         if (maxChange < epsilon) {
             qDebug() << "Converged!";
@@ -109,7 +116,7 @@ void JacobiSolver::solve(double epsilon) {
 void JacobiSolver::workerFinished() {
     mutex.lock();
     finishedThreads++;
-    qDebug() << "Worker finished. Total finished:" << finishedThreads << "/" << workers.size();
+    // qDebug() << "Worker finished. Total finished:" << finishedThreads << "/" << workers.size();
     if (finishedThreads == workers.size()) {
         condition.wakeAll();
     }

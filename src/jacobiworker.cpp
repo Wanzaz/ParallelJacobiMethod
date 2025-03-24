@@ -11,7 +11,7 @@ JacobiWorker::JacobiWorker(int startRow, int endRow, const QVector<QVector<doubl
 void JacobiWorker::compute() {
     if (terminateFlag) return;
 
-    qDebug() << "Worker computing rows:" << startRow << "to" << endRow;
+    // qDebug() << "Worker computing rows:" << startRow << "to" << endRow;
 
     for (int i = startRow; i < endRow; ++i) {
         double sum = 0.0;
@@ -23,11 +23,12 @@ void JacobiWorker::compute() {
         (*xNew)[i] = (*b)[i] - sum;
     }
 
-    qDebug() << "Worker finished rows:" << startRow << "to" << endRow;
+        // qDebug() << "Emitting finishedComputing for rows:" << startRow << "to" << endRow;
     emit finishedComputing();
 }
 
 
 void JacobiWorker::stop() {
+    qDebug() << "Worker destroyed: Rows " << startRow << " to " << endRow;
     terminateFlag = true;
 }
